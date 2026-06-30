@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Folha de Pagamento → Excel / SAP</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy:        #0D1B2A;
+    --navy-mid:    #1B3A5C;
+    --blue:        #2176FF;
+    --blue-light:  #D6E8FF;
+    --teal:        #00C9A7;
+    --white:       #FFFFFF;
+    --gray-bg:     #F4F7FB;
+    --gray-border: #CBD5E1;
+    --text:        #1E293B;
+    --text-muted:  #64748B;
+    --success:     #22C55E;
+    --danger:      #EF4444;
+    --purple:      #7C3AED;
+    --purple-light:#EDE9FE;
+    --amber:       #D97706;
+    --amber-light: #FEF3C7;
+    --green-dark:  #065F46;
+    --red-dark:    #7F1D1D;
+  }
+
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background: var(--gray-bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ── Header ── */
+  header {
+    width: 100%;
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 100%);
+    padding: 28px 40px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    box-shadow: 0 4px 24px rgba(13,27,42,.35);
+  }
+  .header-left { display: flex; align-items: center; gap: 18px; }
+  .logo-icon {
+    width: 52px; height: 52px;
+    background: linear-gradient(135deg, var(--blue), var(--teal));
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; flex-shrink: 0;
+    box-shadow: 0 4px 16px rgba(33,118,255,.4);
+  }
+  header h1 { color: var(--white); font-size: 22px; font-weight: 800; line-height: 1.2; }
+  header p  { color: rgba(255,255,255,.65); font-size: 13px; font-weight: 500; margin-top: 3px; }
+  .logout-btn {
+    background: rgba(255,255,255,.2);
+    border: 1.5px solid rgba(255,255,255,.3);
+    color: var(--white); padding: 10px 20px; border-radius: 8px;
+    font-size: 14px; font-weight: 600; cursor: pointer;
+    transition: all .3s; display: flex; align-items: center; gap: 8px; text-decoration: none;
+  }
+  .logout-btn:hover { background: rgba(255,255,255,.3); transform: translateY(-2px); }
+
+  /* ── Main ── */
+  main { width: 100%; max-width: 860px; padding: 48px 20px 64px; display: flex; flex-direction: column; gap: 28px; }
+
+  /* ── Card ── */
+  .card {
+    background: var(--white); border-radius: 20px; padding: 36px 40px;
+    box-shadow: 0 2px 20px rgba(13,27,42,.08); border: 1px solid var(--gray-border);
+  }
+  .card-title { font-size: 16px; font-weight: 700; color: var(--navy); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+  .card-subtitle { font-size: 13px; color: var(--text-muted); margin-bottom: 28px; }
+
+  /* ── Drop Zone ── */
+  #drop-zone {
+    border: 2.5px dashed var(--gray-border); border-radius: 16px; padding: 52px 24px;
+    text-align: center; cursor: pointer; transition: all .25s; background: var(--gray-bg); position: relative;
+  }
+  #drop-zone:hover, #drop-zone.drag-over { border-color: var(--blue); background: var(--blue-light); transform: scale(1.01); }
+  #drop-zone input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .dz-icon { font-size: 52px; margin-bottom: 16px; display: block; filter: drop-shadow(0 2px 8px rgba(33,118,255,.25)); }
+  .dz-text { font-size: 16px; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+  .dz-hint { font-size: 13px; color: var(--text-muted); }
+  .dz-hint strong { color: var(--blue); }
+
+  /* ── File Preview ── */
+  #file-preview { display: none; align-items: center; gap: 14px; background: var(--blue-light); border: 2px solid var(--blue); border-radius: 14px; padding: 16px 20px; margin-top: 16px; }
+  #file-preview.show { display: flex; }
+  .file-icon { font-size: 32px; flex-shrink: 0; }
+  .file-info { flex: 1; }
+  .file-name { font-size: 14px; font-weight: 700; color: var(--navy); }
+  .file-size { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .file-remove { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--danger); padding: 4px; border-radius: 6px; transition: background .15s; }
+  .file-remove:hover { background: rgba(239,68,68,.1); }
+
+  /* ── Info Pills ── */
+  .info-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 24px; }
+  .pill { display: flex; align-items: center; gap: 6px; background: var(--gray-bg); border: 1px solid var(--gray-border); border-radius: 50px; padding: 6px 14px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+  .pill span { font-size: 14px; }
+
+  /* ── Data de Lançamento ── */
+  .date-row {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    background: var(--amber-light); border: 1.5px solid #FCD34D;
+    border-radius: 14px; padding: 14px 18px; margin-top: 20px;
+  }
+  .date-row label { font-size: 13px; font-weight: 700; color: #92400E; white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+  .date-row input[type="date"] {
+    padding: 8px 12px; border: 1.5px solid #FCD34D; border-radius: 8px;
+    font-family: inherit; font-size: 14px; font-weight: 600; color: var(--navy);
+    background: var(--white); cursor: pointer; outline: none;
+  }
+  .date-row input[type="date"]:focus { border-color: var(--amber); box-shadow: 0 0 0 3px rgba(217,119,6,.15); }
+  .date-hint { font-size: 11px; color: #92400E; opacity: .8; }
+
+  /* ── Progress ── */
+  .progress-area { display: none; margin-top: 18px; }
+  .progress-area.show { display: block; }
+  .progress-label { font-size: 14px; font-weight: 600; color: var(--navy); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .progress-bar-bg { background: var(--gray-border); border-radius: 50px; height: 8px; overflow: hidden; }
+  .progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--blue), var(--teal)); border-radius: 50px; width: 0%; transition: width .4s; animation: shimmer 1.5s infinite; }
+  .progress-bar-fill.purple { background: linear-gradient(90deg, var(--purple), #5B21B6); }
+  @keyframes shimmer { 0%{filter:brightness(1)} 50%{filter:brightness(1.2)} 100%{filter:brightness(1)} }
+
+  /* ── Alert ── */
+  .alert { border-radius: 14px; padding: 16px 20px; font-size: 14px; font-weight: 500; display: flex; align-items: flex-start; gap: 12px; }
+  .alert-success { background: #ECFDF5; border: 1px solid #6EE7B7; color: #065F46; }
+  .alert-error   { background: #FEF2F2; border: 1px solid #FCA5A5; color: #7F1D1D; }
+  .alert-warning { background: #FFFBEB; border: 1px solid #FCD34D; color: #92400E; }
+  .alert-icon { font-size: 20px; flex-shrink: 0; }
+
+  /* ── Botões ── */
+  .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 24px; }
+  @media (max-width: 520px) { .btn-group { grid-template-columns: 1fr; } }
+
+  .convert-btn {
+    width: 100%; padding: 16px 12px; border: none; border-radius: 14px;
+    font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: all .2s; line-height: 1.3; text-align: center;
+  }
+  .convert-btn:disabled { opacity: .5; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+
+  #btn-folha { background: linear-gradient(135deg, var(--blue), #0F4FBF); color: var(--white); box-shadow: 0 4px 20px rgba(33,118,255,.35); }
+  #btn-folha:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(33,118,255,.5); }
+
+  #btn-sap { background: linear-gradient(135deg, var(--purple), #5B21B6); color: var(--white); box-shadow: 0 4px 20px rgba(124,58,237,.35); }
+  #btn-sap:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(124,58,237,.5); }
+
+  #btn-preview-sap { background: linear-gradient(135deg, var(--amber), #B45309); color: var(--white); box-shadow: 0 4px 20px rgba(217,119,6,.35); width: 100%; }
+  #btn-preview-sap:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(217,119,6,.5); }
+
+  #btn-postar-sap { background: linear-gradient(135deg, #16A34A, #15803D); color: var(--white); box-shadow: 0 4px 20px rgba(22,163,74,.35); width: 100%; margin-top: 14px; }
+  #btn-postar-sap:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(22,163,74,.5); }
+
+  .btn-badge { display: block; font-size: 10px; font-weight: 600; opacity: .75; letter-spacing: .5px; text-transform: uppercase; }
+  .btn-label { display: block; }
+
+  /* ── Resumo SAP ── */
+  #resumo-sap-area { display: none; margin-top: 22px; }
+  #resumo-sap-area.show { display: block; }
+
+  /* Datas do lançamento gerado */
+  .datas-lancamento {
+    display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px;
+    background: #F0FDF4; border: 1px solid #86EFAC; border-radius: 12px; padding: 14px 16px;
+  }
+  .data-item { display: flex; flex-direction: column; align-items: center; min-width: 110px; }
+  .data-item-label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 4px; }
+  .data-item-valor { font-size: 15px; font-weight: 800; color: #15803D; }
+  .data-item-sep { color: var(--gray-border); font-size: 20px; align-self: center; }
+
+  /* Totais grid */
+  .resumo-totais {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  @media (max-width: 600px) { .resumo-totais { grid-template-columns: repeat(2, 1fr); } }
+
+  .totais-box {
+    border-radius: 12px; padding: 14px 12px; text-align: center;
+    border: 1px solid var(--gray-border); background: var(--gray-bg);
+  }
+  .totais-box.balanceado   { background: #ECFDF5; border-color: #6EE7B7; }
+  .totais-box.desbalanceado{ background: #FEF2F2; border-color: #FCA5A5; }
+  .totais-box.box-debito   { background: #EFF6FF; border-color: #93C5FD; }
+  .totais-box.box-credito  { background: #F0FDF4; border-color: #86EFAC; }
+  .totais-label { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 6px; }
+  .totais-valor { font-size: 17px; font-weight: 800; color: var(--navy); }
+  .totais-valor.deb { color: #1D4ED8; }
+  .totais-valor.cred { color: #15803D; }
+  .totais-valor.diff-ok  { color: #15803D; }
+  .totais-valor.diff-err { color: #B91C1C; }
+
+  /* Painel de Débito / Crédito por funcionário */
+  .dc-panel {
+    margin-top: 18px;
+    border: 1px solid var(--gray-border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .dc-panel-header {
+    background: var(--navy-mid); color: var(--white);
+    padding: 10px 16px; font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .dc-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  .dc-table thead th {
+    background: #F8FAFC; color: var(--text-muted); padding: 8px 12px;
+    text-align: left; font-weight: 700; font-size: 11px; text-transform: uppercase;
+    letter-spacing: .4px; border-bottom: 1px solid var(--gray-border);
+  }
+  .dc-table thead th.num { text-align: right; }
+  .dc-table tbody td { padding: 8px 12px; border-bottom: 1px solid var(--gray-border); }
+  .dc-table tbody tr:last-child td { border-bottom: none; }
+  .dc-table tbody tr:hover { background: var(--gray-bg); }
+  .dc-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .dc-table td.deb { color: #1D4ED8; font-weight: 600; }
+  .dc-table td.cred { color: #15803D; font-weight: 600; }
+  .dc-table tfoot td { padding: 10px 12px; font-weight: 800; font-size: 13px; background: var(--navy); color: var(--white); }
+  .dc-table tfoot td.num { text-align: right; }
+  .dc-table tfoot td.deb-total  { color: #93C5FD; }
+  .dc-table tfoot td.cred-total { color: #86EFAC; }
+  .dc-wrap { max-height: 300px; overflow-y: auto; }
+
+  /* Diferença em destaque */
+  .diff-banner {
+    border-radius: 12px; padding: 14px 20px; margin: 16px 0;
+    display: flex; align-items: center; gap: 14px; font-weight: 700; font-size: 14px;
+  }
+  .diff-banner.ok  { background: #ECFDF5; border: 1.5px solid #6EE7B7; color: #065F46; }
+  .diff-banner.err { background: #FEF2F2; border: 1.5px solid #FCA5A5; color: #7F1D1D; }
+  .diff-banner-icon { font-size: 24px; }
+  .diff-banner-vals { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 4px; font-size: 13px; font-weight: 600; }
+  .diff-banner-vals span { opacity: .85; }
+  .diff-banner-vals strong { font-size: 15px; }
+
+  /* Tabela funcionários */
+  .tabela-wrap { border: 1px solid var(--gray-border); border-radius: 12px; overflow: hidden; max-height: 280px; overflow-y: auto; margin-top: 16px; }
+  table.tabela-resumo { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.tabela-resumo thead th { background: var(--navy-mid); color: var(--white); padding: 10px 12px; text-align: left; position: sticky; top: 0; font-weight: 700; }
+  table.tabela-resumo th.num, table.tabela-resumo td.num { text-align: right; }
+  table.tabela-resumo tbody td { padding: 8px 12px; border-bottom: 1px solid var(--gray-border); }
+  table.tabela-resumo tbody tr:nth-child(even) { background: var(--gray-bg); }
+
+  details.json-toggle { margin-top: 16px; border: 1px solid var(--gray-border); border-radius: 12px; overflow: hidden; }
+  details.json-toggle summary { cursor: pointer; padding: 12px 16px; background: var(--gray-bg); font-size: 13px; font-weight: 600; color: var(--navy-mid); list-style: none; }
+  details.json-toggle summary::-webkit-details-marker { display: none; }
+  details.json-toggle summary::before { content: "▶ "; }
+  details.json-toggle[open] summary::before { content: "▼ "; }
+  details.json-toggle pre { margin: 0; padding: 16px; background: var(--navy); color: #B6E3D4; font-size: 11.5px; overflow-x: auto; max-height: 360px; overflow-y: auto; font-family: 'Courier New', monospace; line-height: 1.5; }
+
+  /* ── Features ── */
+  .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  @media (max-width: 560px) {
+    .features-grid { grid-template-columns: 1fr; }
+    header { padding: 20px; }
+    .card { padding: 24px 20px; }
+    .resumo-totais { grid-template-columns: 1fr 1fr; }
+    .datas-lancamento { flex-direction: column; align-items: flex-start; }
+  }
+  .feature-item { background: var(--gray-bg); border-radius: 14px; padding: 20px; border: 1px solid var(--gray-border); }
+  .feature-item.purple-tint { background: var(--purple-light); border-color: #C4B5FD; }
+  .feature-item.green-tint  { background: #ECFDF5; border-color: #6EE7B7; }
+  .feature-icon { font-size: 28px; margin-bottom: 10px; display: block; }
+  .feature-title { font-size: 13px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+  .feature-desc  { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+  .spinner { display: inline-block; width: 18px; height: 18px; border: 2.5px solid rgba(255,255,255,.4); border-top-color: white; border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .step-divider { display: flex; align-items: center; gap: 10px; margin: 28px 0 18px; color: var(--text-muted); font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; }
+  .step-divider::before, .step-divider::after { content: ""; flex: 1; height: 1px; background: var(--gray-border); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <div class="logo-icon">📊</div>
+    <div>
+      <h1>Folha de Pagamento → Excel / SAP</h1>
+      <p>Converta o extrato mensal PDF em planilha ou lance direto no SAP Business One</p>
+    </div>
+  </div>
+  <a href="/logout" class="logout-btn">🔓 Sair</a>
+</header>
+
+<main>
+
+  <!-- ── Upload Card ── -->
+  <div class="card">
+    <div class="card-title"><span>📂</span> Importar Extrato PDF</div>
+    <div class="card-subtitle">Selecione ou arraste o PDF da folha de pagamento gerado pelo sistema Planidata</div>
+
+    <div id="drop-zone">
+      <input type="file" id="pdf-input" accept=".pdf">
+      <span class="dz-icon">📄</span>
+      <p class="dz-text">Arraste o PDF aqui</p>
+      <p class="dz-hint">ou <strong>clique para selecionar</strong> — apenas .pdf</p>
+    </div>
+
+    <div id="file-preview">
+      <span class="file-icon">📑</span>
+      <div class="file-info">
+        <div class="file-name" id="fname"></div>
+        <div class="file-size" id="fsize"></div>
+      </div>
+      <button class="file-remove" id="remove-btn" title="Remover">✕</button>
+    </div>
+
+    <div class="info-row">
+      <div class="pill"><span>🗑️</span> PDF excluído após processamento</div>
+      <div class="pill"><span>🔒</span> Processado localmente</div>
+      <div class="pill"><span>⚡</span> Conversão instantânea</div>
+    </div>
+
+    <div class="progress-area" id="progress-area-excel">
+      <div class="progress-label"><span class="spinner"></span><span id="progress-text-excel">Processando PDF...</span></div>
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="progress-fill-excel"></div></div>
+    </div>
+
+    <div id="alert-area" style="margin-top:18px"></div>
+
+    <div class="btn-group">
+      <button class="convert-btn" id="btn-folha" disabled>
+        <span>📥</span>
+        <span><span class="btn-badge">Relatório Padrão</span><span class="btn-label">Gerar Folha de Pagamento</span></span>
+      </button>
+      <button class="convert-btn" id="btn-sap" disabled>
+        <span>🏛️</span>
+        <span><span class="btn-badge">Excel / Formato Contábil</span><span class="btn-label">Gerar Lançamentos CLT (.xlsx)</span></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Card SAP ── -->
+  <div class="card">
+    <div class="card-title"><span>🏛️</span> Lançamento Contábil no SAP Business One</div>
+    <div class="card-subtitle">
+      Defina a <strong>data de lançamento</strong>, gere a pré-visualização para revisar débito e crédito, depois grave no SAP.
+    </div>
+
+    <!-- Campo de data de lançamento -->
+    <div class="date-row">
+      <label for="input-data-lanc">📅 Data de Lançamento</label>
+      <input type="date" id="input-data-lanc">
+      <span class="date-hint">Vencimento = data + 5 dias &nbsp;|&nbsp; Competência = mês seguinte</span>
+    </div>
+
+    <div class="step-divider">Etapa 1 — Pré-visualizar</div>
+
+    <button class="convert-btn" id="btn-preview-sap" disabled>
+      <span>🔍</span>
+      <span><span class="btn-badge">Sem gravar nada no SAP</span><span class="btn-label">Gerar Pré-visualização do Lançamento</span></span>
+    </button>
+
+    <div class="progress-area" id="progress-area-sap">
+      <div class="progress-label"><span class="spinner"></span><span id="progress-text-sap">Processando...</span></div>
+      <div class="progress-bar-bg"><div class="progress-bar-fill purple" id="progress-fill-sap"></div></div>
+    </div>
+
+    <div id="alert-area-sap" style="margin-top:18px"></div>
+
+    <!-- Área do resumo (aparece após preview) -->
+    <div id="resumo-sap-area">
+
+      <!-- Datas calculadas -->
+      <div class="datas-lancamento">
+        <div class="data-item">
+          <div class="data-item-label">📅 Lançamento</div>
+          <div class="data-item-valor" id="r-data-lanc">—</div>
+        </div>
+        <div class="data-item-sep">→</div>
+        <div class="data-item">
+          <div class="data-item-label">📆 Vencimento</div>
+          <div class="data-item-valor" id="r-data-venc">—</div>
+        </div>
+        <div class="data-item-sep">|</div>
+        <div class="data-item">
+          <div class="data-item-label">🗓️ Competência</div>
+          <div class="data-item-valor" id="r-competencia">—</div>
+        </div>
+        <div class="data-item-sep">|</div>
+        <div class="data-item">
+          <div class="data-item-label">👥 Funcionários</div>
+          <div class="data-item-valor" id="r-funcionarios">—</div>
+        </div>
+        <div class="data-item">
+          <div class="data-item-label">📋 Linhas</div>
+          <div class="data-item-valor" id="r-linhas">—</div>
+        </div>
+      </div>
+
+      <!-- Totais Débito / Crédito / Diferença -->
+      <div class="resumo-totais">
+        <div class="totais-box box-debito">
+          <div class="totais-label">💸 Total Débito</div>
+          <div class="totais-valor deb" id="r-debito">—</div>
+        </div>
+        <div class="totais-box box-credito">
+          <div class="totais-label">💰 Total Crédito</div>
+          <div class="totais-valor cred" id="r-credito">—</div>
+        </div>
+        <div class="totais-box" id="r-balanco-box">
+          <div class="totais-label">⚖️ Diferença (D−C)</div>
+          <div class="totais-valor" id="r-diferenca">—</div>
+        </div>
+        <div class="totais-box" id="r-status-box">
+          <div class="totais-label">Status</div>
+          <div class="totais-valor" id="r-status-txt">—</div>
+        </div>
+      </div>
+
+      <!-- Banner diferença em destaque -->
+      <div id="diff-banner" class="diff-banner ok" style="display:none">
+        <span class="diff-banner-icon" id="diff-icon">✅</span>
+        <div>
+          <div id="diff-msg"></div>
+          <div class="diff-banner-vals">
+            <span>Débito: <strong id="diff-deb">—</strong></span>
+            <span>Crédito: <strong id="diff-cred">—</strong></span>
+            <span>Diferença: <strong id="diff-diff">—</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Painel Débito/Crédito por funcionário -->
+      <div class="dc-panel">
+        <div class="dc-panel-header">💹 Débito e Crédito por Funcionário</div>
+        <div class="dc-wrap">
+          <table class="dc-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Funcionário</th>
+                <th>Código BP</th>
+                <th class="num">Líquido (Cred.)</th>
+                <th class="num">Proventos (Déb.)</th>
+                <th class="num">Descontos (Cred.)</th>
+                <th class="num">Linhas</th>
+              </tr>
+            </thead>
+            <tbody id="r-dc-corpo"></tbody>
+            <tfoot>
+              <tr>
+                <td colspan="3">TOTAL GERAL</td>
+                <td class="num cred-total" id="r-dc-total-liq">—</td>
+                <td class="num deb-total"  id="r-dc-total-deb">—</td>
+                <td class="num cred-total" id="r-dc-total-desc">—</td>
+                <td class="num" id="r-dc-total-linhas">—</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tabela de funcionários (resumo simples) -->
+      <div class="tabela-wrap">
+        <table class="tabela-resumo">
+          <thead>
+            <tr>
+              <th>ID</th><th>Funcionário</th><th>Código BP</th>
+              <th class="num">Líquido (R$)</th><th class="num">Linhas</th>
+            </tr>
+          </thead>
+          <tbody id="r-tabela-corpo"></tbody>
+        </table>
+      </div>
+
+      <details class="json-toggle">
+        <summary>Ver JSON completo do lançamento (payload enviado ao SAP)</summary>
+        <pre id="r-json"></pre>
+      </details>
+
+      <div class="step-divider">Etapa 2 — Gravar no SAP</div>
+
+      <button class="convert-btn" id="btn-postar-sap" disabled>
+        <span>🚀</span>
+        <span><span class="btn-badge">Ação irreversível</span><span class="btn-label">Postar Lançamento no SAP</span></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Features Card ── -->
+  <div class="card">
+    <div class="card-title"><span>✨</span> O que cada opção gera</div>
+    <div class="card-subtitle">Escolha o formato conforme sua necessidade</div>
+    <div class="features-grid">
+      <div class="feature-item"><span class="feature-icon">👥</span><div class="feature-title">Resumo Geral</div><div class="feature-desc">Todos os funcionários com proventos, descontos, líquido, INSS e FGTS individuais</div></div>
+      <div class="feature-item"><span class="feature-icon">🏢</span><div class="feature-title">Por Departamento</div><div class="feature-desc">Totais agrupados por departamento com contagem de colaboradores</div></div>
+      <div class="feature-item"><span class="feature-icon">🧾</span><div class="feature-title">Encargos e Tributos</div><div class="feature-desc">INSS, FGTS, IRRF e demais encargos com base de cálculo e saldo a recolher</div></div>
+      <div class="feature-item purple-tint"><span class="feature-icon">🏛️</span><div class="feature-title">Excel SAP — por CLT</div><div class="feature-desc">Uma aba por funcionário CLT com contas contábeis, débito e crédito no formato do modelo</div></div>
+      <div class="feature-item green-tint"><span class="feature-icon">🔍</span><div class="feature-title">Pré-visualização do LCM</div><div class="feature-desc">Mostra datas, débito, crédito e diferença por funcionário antes de gravar</div></div>
+      <div class="feature-item green-tint"><span class="feature-icon">🚀</span><div class="feature-title">Postagem Direta no SAP</div><div class="feature-desc">Cria o JournalEntry real via Service Layer, retornando o DocEntry/DocNum gerado</div></div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+/* ─── refs ─── */
+const input        = document.getElementById('pdf-input');
+const dropZone     = document.getElementById('drop-zone');
+const preview      = document.getElementById('file-preview');
+const fnameEl      = document.getElementById('fname');
+const fsizeEl      = document.getElementById('fsize');
+const removeBtn    = document.getElementById('remove-btn');
+
+const btnFolha      = document.getElementById('btn-folha');
+const btnSap        = document.getElementById('btn-sap');
+const btnPreviewSap = document.getElementById('btn-preview-sap');
+const btnPostarSap  = document.getElementById('btn-postar-sap');
+
+const alertArea    = document.getElementById('alert-area');
+const alertAreaSap = document.getElementById('alert-area-sap');
+
+const progAreaExcel = document.getElementById('progress-area-excel');
+const progFillExcel = document.getElementById('progress-fill-excel');
+const progTextExcel = document.getElementById('progress-text-excel');
+const progAreaSap   = document.getElementById('progress-area-sap');
+const progFillSap   = document.getElementById('progress-fill-sap');
+const progTextSap   = document.getElementById('progress-text-sap');
+
+const resumoSapArea = document.getElementById('resumo-sap-area');
+const inputDataLanc = document.getElementById('input-data-lanc');
+
+let selectedFile   = null;
+let journalPayload = null;
+
+/* data padrão = hoje */
+(function() {
+  const hoje = new Date();
+  const y = hoje.getFullYear();
+  const m = String(hoje.getMonth()+1).padStart(2,'0');
+  const d = String(hoje.getDate()).padStart(2,'0');
+  inputDataLanc.value = `${y}-${m}-${d}`;
+})();
+
+/* ─── utils ─── */
+function formatBytes(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1024*1024) return (b/1024).toFixed(1) + ' KB';
+  return (b/1024/1024).toFixed(2) + ' MB';
+}
+
+function brl(v) {
+  return (Number(v)||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function showAlert(area, type, msg) {
+  const icon = type==='success'?'✅':type==='warning'?'⚠️':'❌';
+  area.innerHTML = `<div class="alert alert-${type}"><span class="alert-icon">${icon}</span><span>${msg}</span></div>`;
+}
+function clearAlert(area) { area.innerHTML=''; }
+function resetProgress(area, fill) { area.classList.remove('show'); fill.style.width='0%'; }
+function setExcelBtnsDisabled(d) { btnFolha.disabled=d; btnSap.disabled=d; }
+
+/* ─── arquivo ─── */
+function setFile(file) {
+  if (!file || !file.name.toLowerCase().endsWith('.pdf')) {
+    showAlert(alertArea,'error','⚠️ Por favor, selecione um arquivo .pdf válido.');
+    return;
+  }
+  selectedFile = file;
+  fnameEl.textContent = file.name;
+  fsizeEl.textContent = formatBytes(file.size);
+  preview.classList.add('show');
+  btnFolha.disabled = btnSap.disabled = btnPreviewSap.disabled = false;
+  clearAlert(alertArea);
+}
+
+function clearFile() {
+  selectedFile = null;
+  input.value = '';
+  preview.classList.remove('show');
+  btnFolha.disabled = btnSap.disabled = btnPreviewSap.disabled = btnPostarSap.disabled = true;
+  journalPayload = null;
+  resumoSapArea.classList.remove('show');
+  clearAlert(alertArea); clearAlert(alertAreaSap);
+  resetProgress(progAreaExcel, progFillExcel);
+  resetProgress(progAreaSap, progFillSap);
+}
+
+dropZone.addEventListener('dragover', e=>{ e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', ()=>dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop', e=>{ e.preventDefault(); dropZone.classList.remove('drag-over'); setFile(e.dataTransfer.files[0]); });
+input.addEventListener('change', ()=>setFile(input.files[0]));
+removeBtn.addEventListener('click', clearFile);
+
+/* ─── conversão Excel ─── */
+async function doConvert(endpoint, downloadName, steps, extraFields) {
+  if (!selectedFile) return;
+  setExcelBtnsDisabled(true);
+  btnPreviewSap.disabled = true;
+  clearAlert(alertArea);
+  progAreaExcel.classList.add('show');
+
+  let stepIdx=0;
+  function animStep() {
+    if (stepIdx>=steps.length) return;
+    const [t,d,l]=steps[stepIdx++];
+    progFillExcel.style.width=t+'%'; progTextExcel.textContent=l;
+    setTimeout(animStep,d);
+  }
+  animStep();
+
+  const fd = new FormData();
+  fd.append('pdf', selectedFile);
+  if (extraFields) Object.entries(extraFields).forEach(([k,v])=>fd.append(k,v));
+
+  try {
+    const res = await fetch(endpoint,{method:'POST',body:fd});
+    if (!res.ok) { const e=await res.json().catch(()=>({})); throw new Error(e.error||`HTTP ${res.status}`); }
+    progFillExcel.style.width='100%'; progTextExcel.textContent='Concluído!';
+    const blob=await res.blob(), url=URL.createObjectURL(blob), a=document.createElement('a');
+    a.href=url; a.download=downloadName; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    setTimeout(()=>{
+      resetProgress(progAreaExcel,progFillExcel);
+      showAlert(alertArea,'success','✅ Planilha gerada com sucesso!');
+      setExcelBtnsDisabled(false); btnPreviewSap.disabled=!selectedFile;
+    },600);
+  } catch(err) {
+    resetProgress(progAreaExcel,progFillExcel);
+    showAlert(alertArea,'error','❌ Erro ao converter: '+err.message);
+    setExcelBtnsDisabled(false); btnPreviewSap.disabled=!selectedFile;
+  }
+}
+
+btnFolha.addEventListener('click',()=>doConvert('/convert','Folha_Pagamento.xlsx',[
+  [20,400,'Lendo o PDF...'],[55,700,'Identificando funcionários...'],[80,600,'Gerando planilha Excel...'],[95,400,'Finalizando...']
+]));
+
+btnSap.addEventListener('click',()=>doConvert('/convert-sap','Folha_Pagamento_SAP.xlsx',[
+  [15,400,'Lendo o PDF...'],[45,600,'Identificando funcionários CLT...'],[70,700,'Mapeando contas contábeis...'],[90,500,'Gerando lançamentos SAP...']
+],{data_lancamento: inputDataLanc.value}));
+
+/* ─── preview SAP ─── */
+function renderResumoSap(resumo) {
+  /* datas */
+  document.getElementById('r-data-lanc').textContent   = resumo.data_lancamento || '—';
+  document.getElementById('r-data-venc').textContent   = resumo.data_vencimento || '—';
+  document.getElementById('r-competencia').textContent = resumo.competencia     || '—';
+  document.getElementById('r-funcionarios').textContent= resumo.total_funcionarios;
+  document.getElementById('r-linhas').textContent      = resumo.total_linhas;
+
+  /* totais */
+  const deb  = resumo.total_debito;
+  const cred = resumo.total_credito;
+  const diff = resumo.diferenca;
+  const ok   = resumo.balanceado;
+
+  document.getElementById('r-debito').textContent  = 'R$ '+brl(deb);
+  document.getElementById('r-credito').textContent = 'R$ '+brl(cred);
+
+  const diffEl = document.getElementById('r-diferenca');
+  diffEl.textContent = 'R$ '+brl(diff);
+  diffEl.className   = 'totais-valor '+(ok?'diff-ok':'diff-err');
+
+  const balBox = document.getElementById('r-balanco-box');
+  balBox.classList.remove('balanceado','desbalanceado');
+  balBox.classList.add(ok?'balanceado':'desbalanceado');
+
+  const stBox = document.getElementById('r-status-box');
+  const stTxt = document.getElementById('r-status-txt');
+  stBox.classList.remove('balanceado','desbalanceado');
+  stBox.classList.add(ok?'balanceado':'desbalanceado');
+  stTxt.textContent = ok ? '✅ Balanceado' : '❌ Desbalanceado';
+  stTxt.className   = 'totais-valor '+(ok?'diff-ok':'diff-err');
+
+  /* banner diferença */
+  const banner = document.getElementById('diff-banner');
+  banner.style.display = 'flex';
+  banner.className = 'diff-banner '+(ok?'ok':'err');
+  document.getElementById('diff-icon').textContent = ok?'✅':'❌';
+  document.getElementById('diff-msg').textContent  = ok
+    ? 'Lançamento balanceado — débito igual ao crédito.'
+    : 'ATENÇÃO: débito e crédito estão diferentes! Verifique antes de postar.';
+  document.getElementById('diff-deb').textContent  = 'R$ '+brl(deb);
+  document.getElementById('diff-cred').textContent = 'R$ '+brl(cred);
+  document.getElementById('diff-diff').textContent = 'R$ '+brl(diff);
+
+  /* painel D/C por funcionário */
+  /* calcula débito e crédito por funcionário varrendo as linhas do payload */
+  const linhas = journalPayload ? (journalPayload.JournalEntryLines||[]) : [];
+  const byBP   = {};  /* { codigo_bp: { deb, desc } } */
+  linhas.forEach(l => {
+    const bp = l.ShortName;
+    const ac = l.AccountCode;
+    if (bp && !ac) {
+      /* linha de BP = crédito do líquido */
+      if (!byBP[bp]) byBP[bp]={liq:0,deb:0,desc:0};
+      byBP[bp].liq += Number(l.Credit)||0;
+    } else if (ac && !bp) {
+      /* linha GL: débito = proventos, crédito = descontos */
+      const cod = ac.substring(0,1);
+      /* 4.x = despesas (débito) */
+      if (cod==='4') {
+        /* find bp from LineMemo? — instead build totals globally */
+      }
+    }
+  });
+
+  /* simplified: use resumo.funcionarios for the table */
+  const corpo = document.getElementById('r-dc-corpo');
+  let totalLiq=0, totalLinhas=0;
+  corpo.innerHTML = resumo.funcionarios.map(f=>{
+    totalLiq    += f.liquido;
+    totalLinhas += f.qtd_linhas;
+    return `<tr>
+      <td>${f.id}</td>
+      <td style="font-weight:600">${f.nome}</td>
+      <td style="font-family:monospace;font-size:11px">${f.codigo_bp}</td>
+      <td class="num cred">R$ ${brl(f.liquido)}</td>
+      <td class="num deb">—</td>
+      <td class="num cred">—</td>
+      <td class="num">${f.qtd_linhas}</td>
+    </tr>`;
+  }).join('');
+
+  /* totais do rodapé do painel DC */
+  document.getElementById('r-dc-total-liq').textContent    = 'R$ '+brl(totalLiq);
+  document.getElementById('r-dc-total-deb').textContent    = 'R$ '+brl(deb);
+  document.getElementById('r-dc-total-desc').textContent   = 'R$ '+brl(cred - totalLiq);
+  document.getElementById('r-dc-total-linhas').textContent = totalLinhas;
+
+  /* tabela simples */
+  document.getElementById('r-tabela-corpo').innerHTML = resumo.funcionarios.map(f=>`
+    <tr>
+      <td>${f.id}</td><td>${f.nome}</td>
+      <td style="font-family:monospace;font-size:11px">${f.codigo_bp}</td>
+      <td class="num">R$ ${brl(f.liquido)}</td>
+      <td class="num">${f.qtd_linhas}</td>
+    </tr>`).join('');
+
+  document.getElementById('r-json').textContent = JSON.stringify(journalPayload,null,2);
+  resumoSapArea.classList.add('show');
+}
+
+async function gerarPreviewSap() {
+  if (!selectedFile) return;
+  if (!inputDataLanc.value) {
+    showAlert(alertAreaSap,'error','❌ Informe a data de lançamento antes de continuar.');
+    return;
+  }
+
+  setExcelBtnsDisabled(true);
+  btnPreviewSap.disabled = true;
+  btnPostarSap.disabled  = true;
+  clearAlert(alertAreaSap);
+  resumoSapArea.classList.remove('show');
+  progAreaSap.classList.add('show');
+
+  let stepIdx=0;
+  const steps=[
+    [15,400,'Lendo o PDF...'],
+    [45,600,'Identificando funcionários CLT...'],
+    [75,700,'Montando lançamento contábil...'],
+    [95,400,'Calculando débito e crédito...'],
+  ];
+  function animStep(){ if(stepIdx>=steps.length)return; const[t,d,l]=steps[stepIdx++]; progFillSap.style.width=t+'%'; progTextSap.textContent=l; setTimeout(animStep,d); }
+  animStep();
+
+  const fd = new FormData();
+  fd.append('pdf', selectedFile);
+  fd.append('data_lancamento', inputDataLanc.value);
+
+  try {
+    const res  = await fetch('/preview-sap',{method:'POST',body:fd});
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok) throw new Error(data.error||`HTTP ${res.status}`);
+
+    journalPayload = data.payload;
+    progFillSap.style.width='100%'; progTextSap.textContent='Concluído!';
+    renderResumoSap(data.resumo);
+
+    const ok = data.resumo.balanceado;
+    setTimeout(()=>{
+      resetProgress(progAreaSap,progFillSap);
+      showAlert(alertAreaSap, ok?'success':'warning',
+        ok ? '✅ Lançamento balanceado e pronto para postar no SAP.'
+           : '⚠️ Débito ≠ Crédito — revise o lançamento antes de postar.');
+      btnPostarSap.disabled = false;
+    },400);
+
+  } catch(err) {
+    resetProgress(progAreaSap,progFillSap);
+    showAlert(alertAreaSap,'error','❌ Erro ao gerar pré-visualização: '+err.message);
+    journalPayload=null;
+  } finally {
+    setExcelBtnsDisabled(false);
+    btnPreviewSap.disabled = !selectedFile;
+  }
+}
+
+btnPreviewSap.addEventListener('click', gerarPreviewSap);
+
+/* ─── postar SAP ─── */
+async function postarNoSap() {
+  if (!journalPayload) return;
+  const ok = confirm('Confirma a gravação deste lançamento contábil no SAP Business One?\n\nEsta ação é irreversível — o documento será criado de fato no SAP.');
+  if (!ok) return;
+
+  btnPostarSap.disabled  = true;
+  btnPreviewSap.disabled = true;
+  clearAlert(alertAreaSap);
+  showAlert(alertAreaSap,'warning','⏳ Enviando lançamento ao SAP, aguarde...');
+
+  try {
+    const res  = await fetch('/postar-sap',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({payload:journalPayload})});
+    const data = await res.json().catch(()=>({}));
+    if (!res.ok) { const d=data.detalhe?('\n\nDetalhe: '+JSON.stringify(data.detalhe)):''; throw new Error((data.error||`HTTP ${res.status}`)+d); }
+    showAlert(alertAreaSap,'success','✅ '+data.mensagem);
+    journalPayload=null; btnPostarSap.disabled=true;
+  } catch(err) {
+    showAlert(alertAreaSap,'error','❌ Erro ao postar no SAP: '+err.message);
+    btnPostarSap.disabled=false;
+  } finally {
+    btnPreviewSap.disabled=!selectedFile;
+  }
+}
+
+btnPostarSap.addEventListener('click', postarNoSap);
+</script>
+</body>
+</html>
