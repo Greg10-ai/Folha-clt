@@ -1,0 +1,146 @@
+═════════════════════════════════════════════════════════════════════════════
+  MAPEAMENTO DE RUBRICAS × CAMPOS DO SCRIPT
+═════════════════════════════════════════════════════════════════════════════
+
+Use este arquivo para mapear as rubricas do seu PDF para o CONFIGURACAO_CONTAS_SAP
+
+EXEMPLO: James de Oliveira Pinto (Demitido)
+
+═════════════════════════════════════════════════════════════════════════════
+PROVENTOS - FÉRIAS
+═════════════════════════════════════════════════════════════════════════════
+
+  Rubrica    PDF Name                           Campo do Script
+  ───────────────────────────────────────────────────────────────────────
+  28         FERIAS VENCIDAS                    ferias_vencidas
+  29         FERIAS PROPORCIONAIS               ferias_proporcionais
+  64         1/3 FERIAS RESCISAO                dif_terco_ferias
+  806        FERIAS MEDIA HORAS                 ferias_media_horas
+  811        FERIAS INDENIZADAS                 ferias_indenizadas
+  816        FÉRIAS PROP.MÉDIA VALOR            ferias_media_valor
+  819        FERIAS VENC.MEDIA VALOR            ferias_vencidas_media_valor
+  8126       1/3 FERIAS INDENIZADAS             terco_ferias_indenizadas
+  8156       FERIAS IND.MEDIA VALOR             ferias_indenizadas_media_valor
+  8169       1/3 FERIAS PROPORCIONAIS           terco_ferias_prop
+
+═════════════════════════════════════════════════════════════════════════════
+PROVENTOS - 13º SALÁRIO
+═════════════════════════════════════════════════════════════════════════════
+
+  Rubrica    PDF Name                           Campo do Script
+  ───────────────────────────────────────────────────────────────────────
+  8550       13º SALARIO                        decimo_terceiro
+  8552       13º SAL.MEDIA VALOR                decimo_terceiro_media_valor
+  9592       13º SALÁRIO INDENIZADO             decimo_terceiro_indenizado
+  9600       13º SAL.INDEN.MEDIA VALOR          decimo_terceiro_indenizado_media_valor
+
+═════════════════════════════════════════════════════════════════════════════
+PROVENTOS - AVISO PRÉVIO
+═════════════════════════════════════════════════════════════════════════════
+
+  Rubrica    PDF Name                           Campo do Script
+  ───────────────────────────────────────────────────────────────────────
+  9591       AVISO PREVIO                       aviso_previo
+  9596       AVISO PREVIO MEDIA VALOR           aviso_previo_media_valor
+
+═════════════════════════════════════════════════════════════════════════════
+PROVENTOS - SALDO DE SALÁRIO
+═════════════════════════════════════════════════════════════════════════════
+
+  Rubrica    PDF Name                           Campo do Script
+  ───────────────────────────────────────────────────────────────────────
+  9179       SALDO DE SALARIO HORAS             saldo_salario_horas
+
+═════════════════════════════════════════════════════════════════════════════
+DESCONTOS - RESCISÃO
+═════════════════════════════════════════════════════════════════════════════
+
+  Rubrica    PDF Name                           Campo do Script
+  ───────────────────────────────────────────────────────────────────────
+  51         LIQUIDO RESCISAO                   liquido_rescisao
+  274        DESC.VA NÃO UTILIZADO              desc_va_nao_utilizado
+  826        DESC.INSS SOBRE RESCISAO           desc_inss_sobre_rescisao
+  989        DESC.INSS 13 SAL.RESCISAO          desc_inss_13sal_rescisao
+
+═════════════════════════════════════════════════════════════════════════════
+COMO USAR ESTE ARQUIVO
+═════════════════════════════════════════════════════════════════════════════
+
+1. Abra um PDF de demissão no seu leitor
+2. Identifique as rubricas com valores
+3. Procure o número da rubrica neste arquivo
+4. Encontre o "Campo do Script" correspondente
+5. Copie para CONFIGURACAO_CONTAS_SAP.py
+
+EXEMPLO:
+  PDF mostra: 28 - FERIAS VENCIDAS: 1.196,68
+  Neste arquivo você encontra: ferias_vencidas
+  Em CONFIGURACAO_CONTAS_SAP.py você coloca:
+    'ferias_vencidas': '4.01.01.01.22'
+
+═════════════════════════════════════════════════════════════════════════════
+IMPORTANTE: VALORES DO JAMES (JANEIRO/2026)
+═════════════════════════════════════════════════════════════════════════════
+
+O PDF de exemplo do James tinha estes valores:
+
+PROVENTOS:
+  Rubrica 28  - FERIAS VENCIDAS              R$ 1.196,68
+  Rubrica 29  - FERIAS PROPORCIONAIS         R$   186,98
+  Rubrica 64  - 1/3 FERIAS RESCISAO          R$   569,53
+  Rubrica 811 - FERIAS INDENIZADAS           R$   186,98
+  Rubrica 816 - FÉRIAS PROP.MÉDIA VALOR      R$    79,98
+  Rubrica 819 - FERIAS VENC.MEDIA VALOR      R$   511,90
+  Rubrica 8126- 1/3 FERIAS INDENIZADAS       R$    88,99
+  Rubrica 8156- FERIAS IND.MEDIA VALOR       R$    79,98
+  Rubrica 8169- 1/3 FERIAS PROPORCIONAIS     R$    88,99
+  Rubrica 8550- 13º SALARIO                  R$   747,93
+  Rubrica 8552- 13º SAL.MEDIA VALOR          R$   265,56
+  Rubrica 9179- SALDO DE SALARIO HORAS       R$   299,17
+  Rubrica 9591- AVISO PREVIO                 R$ 2.468,16
+  Rubrica 9592- 13º SALÁRIO INDENIZADO       R$   186,98
+  Rubrica 9596- AVISO PREVIO MEDIA VALOR     R$ 1.055,79
+  Rubrica 9600- 13º SAL.INDEN.MEDIA VALOR    R$    66,39
+
+DESCONTOS:
+  Rubrica 51  - LIQUIDO RESCISAO (desconto)
+  Rubrica 274 - DESC.VA NÃO UTILIZADO        (desconto)
+  Rubrica 826 - DESC.INSS SOBRE RESCISAO     (desconto)
+  Rubrica 989 - DESC.INSS 13 SAL.RESCISAO    (desconto)
+
+Se você usa as MESMAS contas contábeis, basta descomentaar e preencher.
+
+═════════════════════════════════════════════════════════════════════════════
+CAMPOS NORMAIS (sem rescisão) - JÁ EXISTEM NO TEMPLATE
+═════════════════════════════════════════════════════════════════════════════
+
+Estes campos já estão funcionando, não precisa configurar:
+
+  Rubrica    Campo do Script                    Status
+  ───────────────────────────────────────────────────────────────────────
+  10         HORAS NORMAIS                      horas_normais ✓
+  20         HORAS EXTRAS 50%                   horas_extras_50 ✓
+  12         COMISSÕES                          comissoes ✓
+  15         PRO-LABORE                         proventos_calculados ✓
+  30         REPOUSO S/ COMISSÕES               repouso_sem_comissoes ✓
+  40         REPOUSO S/ HORAS EXTRAS            rep_horas_extras ✓
+  50         VALE TRANSPORTE                    desc_vale_transporte ✓
+  55         PLANO ODONTO-SUL AMERICA           desc_plano_odonto ✓
+  60         PLANO SAUDE-UNIMED                 desc_plano_saude ✓
+  80         AUX.COMBUSTIVEL 1%                 desc_aux_combustivel ✓
+
+═════════════════════════════════════════════════════════════════════════════
+PRÓXIMOS PASSOS
+═════════════════════════════════════════════════════════════════════════════
+
+1. ✓ Identifique as rubricas que você precisa (compare com seu PDF)
+2. ✓ Procure o número da rubrica neste arquivo
+3. ✓ Anote o "Campo do Script" 
+4. ✓ Consiga as contas contábeis do seu SAP (pergunte ao controller)
+5. ✓ Preenchcha em CONFIGURACAO_CONTAS_SAP.py
+6. ✓ Descomente e copie para app.py / CONTAS_CONFIGURÁVEIS
+7. ✓ Teste com um PDF de demissão
+8. ✓ Gere o lançamento SAP
+9. ✓ Verifique se os valores aparecem
+
+═════════════════════════════════════════════════════════════════════════════

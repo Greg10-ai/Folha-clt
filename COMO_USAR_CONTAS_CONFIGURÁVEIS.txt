@@ -1,0 +1,152 @@
+═════════════════════════════════════════════════════════════════════════════
+  COMO USAR O SISTEMA DE CONTAS CONFIGURÁVEIS
+═════════════════════════════════════════════════════════════════════════════
+
+PROBLEMA:
+─────────
+Você está tentando lançar folhas com rescisão (demissão) mas as rubricas de
+férias, 13º salário, aviso prévio e outros descontos não estão apareceendo no
+SAP porque as contas contábeis não estão configuradas no script.
+
+SOLUÇÃO:
+────────
+Agora é simples! Configure as contas uma única vez e o script usará 
+automaticamente em TODOS os lançamentos.
+
+
+PASSO 1: IDENTIFIQUE AS CONTAS SAP
+═════════════════════════════════════════════════════════════════════════════
+
+As contas que podem estar faltando:
+
+  PROVENTOS:
+  • Férias Vencidas (Rubrica 28)
+  • Férias Proporcionais (Rubrica 29)  
+  • Férias Indenizadas (Rubrica 811)
+  • 1/3 Férias (múltiplas rubricas 8126, 8169, 64)
+  • 13º Salário (Rubrica 8550)
+  • 13º Salário Indenizado (Rubrica 9592)
+  • Aviso Prévio (Rubrica 9591)
+  • Saldo de Salário (Rubrica 9179)
+  
+  DESCONTOS/RESCISÃO:
+  • DESC.VA Não Utilizado (Rubrica 274)
+  • DESC.INSS Sobre Rescisão (Rubrica 826)
+  • DESC.INSS 13º Rescisão (Rubrica 989)
+
+
+PASSO 2: ABRA O ARQUIVO DE CONFIGURAÇÃO
+═════════════════════════════════════════════════════════════════════════════
+
+Abra este arquivo:
+  📄 CONFIGURACAO_CONTAS_SAP.py
+
+Ele contém um template com todas as rubricas que podem estar faltando.
+
+
+PASSO 3: PREENCHA AS CONTAS
+═════════════════════════════════════════════════════════════════════════════
+
+Para cada rubrica que precisa, copie a linha do template e preencha a conta.
+
+Exemplo: Se Férias Vencidas usa a conta 4.01.01.01.22 no seu SAP:
+
+  ANTES (comentado):
+  # 'ferias_vencidas': '???',  # Rubrica 28
+  
+  DEPOIS (descomentado e preenchido):
+  'ferias_vencidas': '4.01.01.01.22',  # Rubrica 28
+
+
+PASSO 4: ADICIONE AO app.py
+═════════════════════════════════════════════════════════════════════════════
+
+Abra app.py e procure por:
+
+  CONTAS_CONFIGURÁVEIS = {
+      # ─ PROVENTOS/RESCISÃO ─────────────────────────────────────────
+      # 'ferias_vencidas': '4.01.01.01.XX',
+      ...
+  }
+
+Cole as linhas preenchidas ali, descomentando-as:
+
+  CONTAS_CONFIGURÁVEIS = {
+      'ferias_vencidas': '4.01.01.01.22',       # ← DESCOMENTE E PREENCHA
+      'ferias_proporcionais': '4.01.01.01.23',  # ← SUA CONTA AQUI
+      'terco_ferias_indenizadas': '4.01.01.01.31',
+      ...
+  }
+
+⚠️  IMPORTANTE: Deixe as linhas que não usa comentadas (com #)
+
+
+PASSO 5: TESTE
+═════════════════════════════════════════════════════════════════════════════
+
+1. Selecione um PDF de rescisão (tipo "DEMITIDO")
+2. Gere o Excel de lançamento SAP
+3. Abra a planilha
+4. Verifique se os valores aparecem nas linhas de Férias, 13º, Aviso Prévio
+
+
+═════════════════════════════════════════════════════════════════════════════
+EXEMPLO COMPLETO (Para James de Oliveira Pinto - Demitido)
+═════════════════════════════════════════════════════════════════════════════
+
+Se você já sabe as contas do seu Chart of Accounts, descomente estas linhas:
+
+    CONTAS_CONFIGURÁVEIS = {
+        'ferias_vencidas': '4.01.01.01.XX',
+        'ferias_proporcionais': '4.01.01.01.XX',
+        'ferias_media_horas': '4.01.01.01.XX',
+        'ferias_media_valor': '4.01.01.01.XX',
+        'ferias_vencidas_media_valor': '4.01.01.01.XX',
+        'ferias_indenizadas': '4.01.01.01.XX',
+        'ferias_indenizadas_media_valor': '4.01.01.01.XX',
+        'terco_ferias_prop': '4.01.01.01.XX',
+        'terco_ferias_indenizadas': '4.01.01.01.XX',
+        'dif_terco_ferias': '4.01.01.01.XX',
+        'decimo_terceiro': '4.01.01.01.XX',
+        'decimo_terceiro_media_valor': '4.01.01.01.XX',
+        'decimo_terceiro_indenizado': '4.01.01.01.XX',
+        'decimo_terceiro_indenizado_media_valor': '4.01.01.01.XX',
+        'aviso_previo': '4.01.01.01.XX',
+        'aviso_previo_media_valor': '4.01.01.01.XX',
+        'saldo_salario_horas': '4.01.01.01.XX',
+        'liquido_rescisao': '4.01.01.01.XX',
+        'desc_va_nao_utilizado': '3.01.02.02.XX',
+        'desc_inss_sobre_rescisao': '2.01.01.07.XX',
+        'desc_inss_13sal_rescisao': '2.01.01.07.XX',
+    }
+
+Substitua os 'XX' pelas contas reais do seu SAP.
+
+
+═════════════════════════════════════════════════════════════════════════════
+COMO SABER AS CONTAS CORRETAS?
+═════════════════════════════════════════════════════════════════════════════
+
+✓ Peça ao seu contador/controller
+✓ Veja um lançamento manual feito anteriormente no SAP  
+✓ Procure no Chart of Accounts (4 = Despesa, 3 = Desconto, etc.)
+✓ Verifique com a consultoria B1/SAP
+
+
+═════════════════════════════════════════════════════════════════════════════
+DÚVIDAS?
+═════════════════════════════════════════════════════════════════════════════
+
+Q: Posso deixar algumas contas em branco?
+R: Sim. Deixe comentadas as que não usa. Só descomente e preencha as que precisa.
+
+Q: Se eu adicionar uma conta errada, vai quebrar o SAP?
+R: Não. O SAP rejeitará a conta no teste, mas o script não vai quebrar.
+
+Q: Preciso preencher TODAS as contas?
+R: Não. Preencha apenas as que estão faltando no seu lançamento.
+
+Q: Onde vejo se está funcionando?
+R: Gere um lançamento → Abra o Excel → Veja se os valores aparecem nas linhas.
+
+═════════════════════════════════════════════════════════════════════════════
