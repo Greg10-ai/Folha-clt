@@ -59,9 +59,10 @@ def resolver_datas_sap(data_lanc_str=None):
 
     mes = data_lanc.month + 1
     ano = data_lanc.year
-    if mes > 12:
-        mes = 1
-        ano += 1
+    mes -= 1
+    if mes < 1:
+        mes = 12
+        ano -= 1
     competencia = f'{mes:02d}.{ano}'
 
     return data_lanc, data_venc, data_doc, competencia
@@ -187,6 +188,8 @@ CODIGOS_CLT = {
     "ROGER VIEIRA BIANCHIN": "F002134",
     "VICTOR NETO TORETTI": "F001588",
     "FABIANO LUIS MANFRON MORO": "F001592",
+    "EVELAINE BRUNELLI": "F002180",
+    "CHARLES FERREIRA LACAVA":"F002175"
 }
 
 
@@ -457,15 +460,26 @@ def parse_pdf(path):
         m_dff = re.search(r'\d*\s*DIFEREN[CÇ]A\s+DE\s+FERIAS\b.*?([\d.,]+)\s*P', block, re.IGNORECASE | re.DOTALL)
         emp['dif_ferias'] = safe_float(m_dff.group(1)) if m_dff else 0.0
 
-        m_dft = re.search(r'\d*\s*DIF\.?\s*1/3\s+DE\s+FERIAS\s+[\d.,]+\s+([\d.,]+)\s*P', block, re.IGNORECASE)
-        if not m_dft:
-            m_dft = re.search(r'\b64\s+1/3\s+FERIAS\s+RESCISAO\b.*?([\d.,]+)\s*P', block, re.IGNORECASE | re.DOTALL)
-        if not m_dft:
-            m_dft = re.search(r'64.*?([\d.,]+)\s*P', block, re.IGNORECASE | re.DOTALL)
+        m_dft = re.search(
+            r'DIF\.?\s*1/3\s+DE\s+FERIAS\s+[\d.,]+\s+([\d.,]+)\s*[PD]\b',
+            block
+        )
         emp['dif_terco_ferias'] = safe_float(m_dft.group(1)) if m_dft else 0.0
 
         m_dmhf = re.search(r'\d*\s*DIFEREN[CÇ]A\s+M[ÉE]DIA\s+HORA\s+FERIAS\s+[\d:.,]+\s+([\d.,]+)\s*P', block, re.IGNORECASE)
         emp['dif_media_hora_ferias'] = safe_float(m_dmhf.group(1)) if m_dmhf else 0.0
+
+        m_dif_media_hora = re.search(
+            r'DIFEREN[CÇ]A\s+MEDIA\s+HORA\s+FERIAS\s+[\d.,]+\s+([\d.,]+)\s*[PD]\b',
+            block
+        )
+        emp['dif_media_hora_ferias'] = safe_float(m_dif_media_hora.group(1)) if m_dif_media_hora else 0.0
+
+        m_dif_ferias_valor = re.search(
+            r'DIF\.?\s*FERIAS\s+MEDIA\s+VALOR\s+[\d.,]+\s+([\d.,]+)\s*[PD]\b',
+            block
+        )
+        emp['dif_ferias_media_valor'] = safe_float(m_dif_ferias_valor.group(1)) if m_dif_ferias_valor else 0.0
 
         m_fv = re.search(r'\b28\s+FERIAS\s+VENCIDAS\b.*?([\d.,]+)\s*P', block, re.IGNORECASE | re.DOTALL)
         if not m_fv:
@@ -511,15 +525,20 @@ def parse_pdf(path):
             m_13imv = re.search(r'9600.*?([\d.,]+)\s*P', block, re.IGNORECASE | re.DOTALL)
         emp['decimo_terceiro_indenizado_media_valor'] = safe_float(m_13imv.group(1)) if m_13imv else 0.0
 
-        m_ap = re.search(r'\b9591\s+AVISO\s+PREVIO\b.*?([\d.,]+)\s*P', block, re.IGNORECASE | re.DOTALL)
+        m_ap = re.search(r'\b9591\s+AVISO\s+PREVIO\b.*?([\d.,]+)\s*D', block, re.IGNORECASE | re.DOTALL)
         if not m_ap:
-            m_ap = re.search(r'AVISO\s+PREVIO.*?([\d.,]+)\s*P', block, re.IGNORECASE | re.DOTALL)
+            m_ap = re.search(r'AVISO\s+PREVIO\.*?([\d.,]+)\s*D', block, re.IGNORECASE | re.DOTALL)
         emp['aviso_previo'] = safe_float(m_ap.group(1)) if m_ap else 0.0
 
         m_apmv = re.search(r'\b9596\s+AVISO\s+PREVIO\s+MEDIA\s+VALOR\b.*?([\d.,]+)\s*P', block, re.IGNORECASE | re.DOTALL)
         if not m_apmv:
             m_apmv = re.search(r'AVISO\s+PREVIO\s+MEDIA\s+VALOR.*?([\d.,]+)\s*P', block, re.IGNORECASE | re.DOTALL)
         emp['aviso_previo_media_valor'] = safe_float(m_apmv.group(1)) if m_apmv else 0.0
+
+        m_apr = re.search(r'\b49\s+AVISO\s+PREVIO\s+REAVIDO\b.*?([\d.,]+)\s*D', block, re.IGNORECASE | re.DOTALL)
+        if not m_apr:
+            m_apr = re.search(r'AVISO\s+PREVIO\s+REAVIDO.*?([\d.,]+)\s*D', block, re.IGNORECASE | re.DOTALL)
+        emp['aviso_previo_reavido'] = safe_float(m_apr.group(1)) if m_apr else 0.0
 
         m_hn = re.search(r'HORAS\s+NORMAIS.*?(\d+:\d+)\s+([\d.,]+)', block, re.IGNORECASE)
         emp['horas_normais'] = safe_float(m_hn.group(2)) if m_hn else 0.0
@@ -529,6 +548,16 @@ def parse_pdf(path):
 
         m_he50 = re.search(r'\d+HORAS EXTRAS 50%\s+[\d:]+\s+([\d.,]+)P', block)
         emp['horas_extras_50'] = safe_float(m_he50.group(1)) if m_he50 else 0.0
+
+        # Captura o SEGUNDO número (valor) pulando o primeiro (quantidade)
+        m_13m = re.search(
+                r'13[º°]\s+SAL\.?\s*MEDIA\s+HORAS\s+[\d.,]+\s+([\d.,]+)\s*P',
+                block, re.IGNORECASE
+            )
+        emp['decimo_terceiro_sal_media_horas'] = safe_float(m_13m.group(1)) if m_13m else 0.0
+
+        m_13v = re.search(r'13[º°]\s+SAL\.?\s+MEDIA\sVALOR.*?([\d.,]+)\s*P', block, re.IGNORECASE | re.DOTALL)
+        emp['decimo_terceiro_sal_media_valor'] = safe_float(m_13v.group(1)) if m_13v else 0.0
 
         m_he100 = re.search(r'\d+HORAS EXTRAS 100%\s+[\d:]+\s+([\d.,]+)P', block)
         emp['horas_extras_100'] = safe_float(m_he100.group(1)) if m_he100 else 0.0
@@ -648,9 +677,9 @@ def parse_pdf(path):
         m_irrf = re.search(r'IMPOSTO DE RENDA\s+[\d.,]+\s+([\d.,]+)D', block)
         emp['desc_irrf'] = safe_float(m_irrf.group(1)) if m_irrf else 0.0
 
-        m_desc_va = re.search(r'\b274\s+DESC\.VA\s+NÃO\s+UTILIZADO\b.*?([\d.,]+)\s*D', block, re.IGNORECASE | re.DOTALL)
+        m_desc_va = re.search(r'\b274\s+DESC\.VR\s+NÃO\s+UTILIZADO\b.*?([\d.,]+)\s*D', block, re.IGNORECASE | re.DOTALL)
         if not m_desc_va:
-            m_desc_va = re.search(r'DESC\.VA\s+NÃO\s+UTILIZADO.*?([\d.,]+)\s*D', block, re.IGNORECASE | re.DOTALL)
+            m_desc_va = re.search(r'DESC\.VR\s+NÃO\s+UTILIZADO.*?([\d.,]+)\s*D', block, re.IGNORECASE | re.DOTALL)
         emp['desc_va_nao_utilizado'] = safe_float(m_desc_va.group(1)) if m_desc_va else 0.0
 
         # ── DESC.ADIANT.DE FERIAS — rubrica 937 ──────────────────────────────
@@ -925,10 +954,11 @@ def create_excel(employees, encargos, enc_rat):
             emp['horas_normais'],emp['horas_ferias'],emp['horas_afastadas_inss'],emp['ferias_proporcionais'],
             emp['ferias_vencidas'],emp['ferias_indenizadas'],emp['comissoes'],emp['repouso_sem_comissoes'],
             emp['pro_labore'],emp['horas_extras_50'],emp['rep_horas_extras'],
+            emp['decimo_terceiro_sal_media_horas'],emp['decimo_terceiro_sal_media_valor'],
             emp['ferias_media_horas'],emp['ferias_media_valor'],emp['ferias_vencidas_media_valor'],emp['ferias_indenizadas_media_valor'],
             emp['terco_ferias_prop'],emp['terco_ferias_indenizadas'],emp['decimo_terceiro'],emp['decimo_terceiro_media_valor'],
             emp['decimo_terceiro_indenizado'],emp['decimo_terceiro_indenizado_media_valor'],
-            emp['aviso_previo'],emp['aviso_previo_media_valor'],emp['saldo_salario_horas'],
+            emp['aviso_previo'],emp['aviso_previo_media_valor'],emp['saldo_salario_horas'],emp['aviso_previo_reavido'],
             emp.get('dif_ferias',0.0),emp.get('dif_terco_ferias',0.0),emp.get('dif_media_hora_ferias',0.0),
             emp['proventos_calculados'],
             emp['desc_vale_transporte'],emp['liquido_rescisao'],
@@ -1175,9 +1205,11 @@ LINHAS_TEMPLATE = [
     ('GL', '4.01.01.01.01', 'PRO-LABORE',                            'proventos_calculados',               None),
     ('GL', '4.01.01.01.02', 'HORAS NORMAIS',                         'horas_normais',                      None),
     ('GL', '4.01.01.01.10', 'HORAS EXTRAS 50%',                      'horas_extras_50',                    None),
+    ('GL', '4.01.01.01.45', 'HORAS EXTRAS 100%',                     'horas_extras_100',                    None),
     ('GL', '4.01.01.01.44', 'LIQUIDO RESCISAO',                      None,                                 'liquido_rescisao'),
     ('GL', '4.01.01.01.21', 'REPOUSO S/ HORAS EXTRAS',               'rep_horas_extras',                   None),
     ('GL', '4.01.01.01.35', 'SALDO DE SALARIO HORAS',                'saldo_salario_horas',                None),
+    ('GL', '4.01.01.01.46', '13º SAL.MEDIA HORAS ',                  'decimo_terceiro_sal_media_horas',      None),
     ('GL', '4.01.01.01.09', 'HORAS FERIAS',                          'horas_ferias',                       None),
     ('GL', '4.01.01.01.22', 'FERIAS VENCIDAS',                       'ferias_vencidas',                    None),
     ('GL', '4.01.01.01.23', 'FERIAS PROPORCIONAIS',                  'ferias_proporcionais',               None),
@@ -1190,11 +1222,14 @@ LINHAS_TEMPLATE = [
     ('GL', '4.01.01.01.31', '1/3 FERIAS INDENIZADAS',                'terco_ferias_indenizadas',           None),
     ('GL', '4.01.01.01.33', '1/3 FERIAS PROPORCIONAIS',              'terco_ferias_prop',                  None),  # rubricas 8169/931
     ('GL', '4.01.01.01.19', '13º SALÁRIO',                           'decimo_terceiro',                    None),
+    ('GL', '4.01.01.01.43', 'DIFERENCA MEDIA HORA FERIAS',           'dif_media_hora_ferias',                   None),
+    ('GL', '4.01.01.01.47', 'DIF.FERIAS MEDIA VALOR',                'dif_ferias_media_valor',                   None),
     ('GL', '4.01.01.01.34', '13º SAL.MEDIA VALOR',                   'decimo_terceiro_media_valor',        None),
     ('GL', '4.01.01.01.36', '13º SALÁRIO INDENIZADO',                'decimo_terceiro_indenizado',         None),
     ('GL', '4.01.01.01.37', '13º SAL.INDEN.MEDIA VALOR',             'decimo_terceiro_indenizado_media_valor', None),
     ('GL', '4.01.01.01.38', 'AVISO PREVIO',                          'aviso_previo',                       None),
     ('GL', '4.01.01.01.39', 'AVISO PREVIO MEDIA VALOR',              'aviso_previo_media_valor',           None),
+    ('GL', '4.01.01.01.38', 'AVISO PREVIO REAVIDO',                   None,                                'aviso_previo_reavido'),
     ('GL', '4.01.01.01.40', 'HORAS AFAST.INSS (P/DOENC',            'desc_horas_afastadas',   None),
     ('GL', '3.01.02.02.01', 'DESC.VALE TRANSPORTE',                  None,                                 'desc_vale_transporte'),  # soma 48+220
     ('GL', '3.01.02.02.03', 'DESC.PLANO ODONTO-SUL AMERICA',         None,                                 'desc_plano_odonto'),
@@ -1220,6 +1255,7 @@ LINHAS_TEMPLATE = [
     ('GL', '4.01.01.01.48', 'DIFERENCA SALARIO',                     'diferenca_salario',                  None),
     ('GL', '4.01.01.01.49', 'OUTROS PROVENTOS',                      'outros_proventos',                   None),
     ('GL', '3.01.02.02.12', 'OUTROS DESCONTOS',                      None,                                 'outros_descontos'),
+
 ]
 
 
