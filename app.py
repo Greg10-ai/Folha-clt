@@ -1,4 +1,4 @@
-﻿from flask import Flask, request, send_file, jsonify, session, render_template_string, redirect, url_for
+from flask import Flask, request, send_file, jsonify, session, render_template_string, redirect, url_for
 from functools import wraps
 import pdfplumber
 import re
@@ -16,6 +16,18 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 import sys
+
+# ── FIX: força UTF-8 no stdout/stderr (evita UnicodeEncodeError com emojis no Windows) ──
+if sys.stdout.encoding is None or sys.stdout.encoding.lower() != 'utf-8':
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+if sys.stderr.encoding is None or sys.stderr.encoding.lower() != 'utf-8':
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
+def _print_console(*args, **kwargs):
+    try:
+        print(*args, **kwargs)
+    except (OSError, ValueError):
+        pass
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -117,7 +129,7 @@ def obter_info_ip(ip):
                     "cidade": dados.get("city", "Desconhecido"),
                     "isp": dados.get("org", "Desconhecido"), "ip_publico": ip}
     except Exception as e:
-        print(f"⚠️  Erro IP: {e}", flush=True)
+        _print_console(f"⚠️  Erro IP: {e}", flush=True)
     return {"ip": ip, "pais": "Não disponível", "estado": "Não disponível",
             "cidade": "Não disponível", "isp": "Não disponível", "ip_publico": ip}
 
@@ -143,7 +155,7 @@ def enviar_email_alerta(ip, info_ip, email_destino):
             s.sendmail(EMAIL_SENDER, email_destino, mensagem.as_string())
         return True
     except Exception as e:
-        print(f"❌ Erro alerta: {e}", flush=True)
+        _print_console(f"❌ Erro alerta: {e}", flush=True)
         return False
 
 def enviar_alerta_honeypot(ip, senha_tentada, info_ip, email_destino):
@@ -165,7 +177,7 @@ def enviar_alerta_honeypot(ip, senha_tentada, info_ip, email_destino):
             s.sendmail(EMAIL_SENDER, email_destino, mensagem.as_string())
         return True
     except Exception as e:
-        print(f"❌ Erro honeypot: {e}", flush=True)
+        _print_console(f"❌ Erro honeypot: {e}", flush=True)
         return False
 
 HTML_FILE = os.path.join(os.path.dirname(__file__), 'index.html')
@@ -195,7 +207,7 @@ CODIGOS_CLT = {
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    print(f"\n🔐 /LOGIN {request.method}", flush=True)
+    _print_console(f"\n🔐 /LOGIN {request.method}", flush=True)
     if request.method == 'POST':
         senha_fornecida = request.form.get('senha', '')
         ip_cliente = obter_ip_cliente()
@@ -211,7 +223,7 @@ def login():
                 info_ip = obter_info_ip(ip_cliente)
                 enviar_alerta_honeypot(ip_cliente, senha_fornecida, info_ip, EMAIL_ADMIN)
             except Exception as e:
-                print(f"❌ {e}", flush=True)
+                _print_console(f"❌ {e}", flush=True)
             return render_template_string("""<!DOCTYPE html><html><head><meta charset="UTF-8">
                 <title>Bloqueado</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea,#764ba2);
                 min-height:100vh;display:flex;align-items:center;justify-content:center;margin:0}
@@ -258,7 +270,7 @@ def login():
                 info_ip = obter_info_ip(ip_cliente)
                 enviar_email_alerta(ip_cliente, info_ip, EMAIL_ADMIN)
             except Exception as e:
-                print(f"❌ {e}", flush=True)
+                _print_console(f"❌ {e}", flush=True)
             return render_template_string("""<!DOCTYPE html><html><head><meta charset="UTF-8">
                 <title>Bloqueado</title><style>body{font-family:Arial;background:linear-gradient(135deg,#667eea,#764ba2);
                 min-height:100vh;display:flex;align-items:center;justify-content:center;margin:0}
@@ -344,6 +356,12 @@ def aplicar_regra_fabiano(emp, block):
     emp['valor_fgts'] = valor_resumo(block, r'Valor FGTS')
     emp['liquido'] = valor_resumo(block, r'L(?:í|Ã­)quido')
     emp['base_irrf'] = valor_resumo(block, r'Base IRRF')
+
+
+def aplicar_regra_lucas(emp, block):
+    if emp['nome'].strip().upper() != 'LUCAS CABRAL BOTT':
+        return
+    emp['liquido'] = 0.0
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -607,7 +625,7 @@ def parse_pdf(path):
         emp['desc_vale_transporte'] = desc_vt_48 + desc_vt_220
 
         if 'VALE TRANSPORTE' in block.upper():
-            print(f"DEBUG VT: 48={desc_vt_48} | 220={desc_vt_220} | total={emp['desc_vale_transporte']}", flush=True)
+            _print_console(f"DEBUG VT: 48={desc_vt_48} | 220={desc_vt_220} | total={emp['desc_vale_transporte']}", flush=True)
 
         # ── DESC.VALE ADIANTAMENTO — soma rubricas 278 e XX/XX (complementar) ─
         m_adian_278 = re.search(
@@ -624,7 +642,7 @@ def parse_pdf(path):
         emp['desc_vale_adiantamento'] = desc_adian_278 + desc_adian_comp
 
         if desc_adian_comp > 0:
-            print(f"DEBUG ADIANT: 278={desc_adian_278} | comp={desc_adian_comp} | total={emp['desc_vale_adiantamento']}", flush=True)
+            _print_console(f"DEBUG ADIANT: 278={desc_adian_278} | comp={desc_adian_comp} | total={emp['desc_vale_adiantamento']}", flush=True)
 
         m_liqr = re.search(r'\b51\s*LIQUIDO\s+RESCISAO\b.*?([\d.,]+)\s*D', block, re.IGNORECASE | re.DOTALL)
         if not m_liqr:
@@ -764,6 +782,7 @@ def parse_pdf(path):
         emp['obs'] = ' | '.join(obs_partes)
         emp['rubricas'] = extrair_rubricas_por_codigo(block)
         aplicar_regra_fabiano(emp, block)
+        aplicar_regra_lucas(emp, block)
         employees.append(emp)
 
     encargos = _parse_encargos(full)
@@ -1206,7 +1225,7 @@ LINHAS_TEMPLATE = [
     ('GL', '4.01.01.01.02', 'HORAS NORMAIS',                         'horas_normais',                      None),
     ('GL', '4.01.01.01.10', 'HORAS EXTRAS 50%',                      'horas_extras_50',                    None),
     ('GL', '4.01.01.01.45', 'HORAS EXTRAS 100%',                     'horas_extras_100',                    None),
-    ('GL', '4.01.01.01.44', 'LIQUIDO RESCISAO',                      None,                                 'liquido_rescisao'),
+    ('GL', '3.01.02.02.02', 'LIQUIDO RESCISAO',                      None,                       'liquido_rescisao'),
     ('GL', '4.01.01.01.21', 'REPOUSO S/ HORAS EXTRAS',               'rep_horas_extras',                   None),
     ('GL', '4.01.01.01.35', 'SALDO DE SALARIO HORAS',                'saldo_salario_horas',                None),
     ('GL', '4.01.01.01.46', '13º SAL.MEDIA HORAS ',                  'decimo_terceiro_sal_media_horas',      None),
@@ -1229,7 +1248,7 @@ LINHAS_TEMPLATE = [
     ('GL', '4.01.01.01.37', '13º SAL.INDEN.MEDIA VALOR',             'decimo_terceiro_indenizado_media_valor', None),
     ('GL', '4.01.01.01.38', 'AVISO PREVIO',                          'aviso_previo',                       None),
     ('GL', '4.01.01.01.39', 'AVISO PREVIO MEDIA VALOR',              'aviso_previo_media_valor',           None),
-    ('GL', '4.01.01.01.38', 'AVISO PREVIO REAVIDO',                   None,                                'aviso_previo_reavido'),
+    ('GL', '3.01.02.02.11', 'AVISO PREVIO REAVIDO',                   None,                                'aviso_previo_reavido'),
     ('GL', '4.01.01.01.40', 'HORAS AFAST.INSS (P/DOENC',            'desc_horas_afastadas',   None),
     ('GL', '3.01.02.02.01', 'DESC.VALE TRANSPORTE',                  None,                                 'desc_vale_transporte'),  # soma 48+220
     ('GL', '3.01.02.02.03', 'DESC.PLANO ODONTO-SUL AMERICA',         None,                                 'desc_plano_odonto'),
@@ -1399,9 +1418,9 @@ def create_excel_sap(employees, data_lanc=None, data_venc=None, data_doc=None, c
 def sap_login():
     url=f'{SAP_SL_URL}/Login'
     payload={'CompanyDB':SAP_COMPANY_DB,'UserName':SAP_USER,'Password':SAP_PASSWORD}
-    print(f"🔑 SAP Login → {url}", flush=True)
+    _print_console(f"🔑 SAP Login → {url}", flush=True)
     r=requests.post(url,json=payload,verify=False,timeout=15)
-    print(f"   Status: {r.status_code}", flush=True)
+    _print_console(f"   Status: {r.status_code}", flush=True)
     if r.status_code!=200: r.raise_for_status()
     return r.cookies
 
@@ -1561,10 +1580,10 @@ def postar_sap():
         return jsonify({'error':'Falha ao autenticar no SAP Service Layer','detalhe':str(e)}),502
 
     try:
-        print(f"📤 Postando JournalEntry em {SAP_SL_URL}/JournalEntries", flush=True)
+        _print_console(f"📤 Postando JournalEntry em {SAP_SL_URL}/JournalEntries", flush=True)
         resp=requests.post(f'{SAP_SL_URL}/JournalEntries',json=payload,cookies=cookies,
                            headers={'Content-Type':'application/json'},verify=False,timeout=30)
-        print(f"   Resposta SAP: {resp.status_code}", flush=True)
+        _print_console(f"   Resposta SAP: {resp.status_code}", flush=True)
         if resp.status_code not in (200,201):
             detalhe=resp.json() if resp.content else resp.text
             return jsonify({'error':'SAP rejeitou o lançamento','detalhe':detalhe}),502
