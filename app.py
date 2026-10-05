@@ -86,9 +86,9 @@ for _ep in ("/JournalEntries", "/Login", "/JournalVouchers"):
         _sap_url_raw = _sap_url_raw[:-len(_ep)]
         break
 SAP_SL_URL     = _sap_url_raw.rstrip("/")
-SAP_COMPANY_DB = os.environ.get('CompanyDB', '')
-SAP_USER       = os.environ.get('SAP_USER', '')
-SAP_PASSWORD   = os.environ.get('SAP_PASSWORD', '')
+SAP_COMPANY_DB = 'SBO_PRD_INOVASUPRI'
+SAP_USER       = '3i_0016'
+SAP_PASSWORD   = 'Ib@admin016'
 SAP_VERIFY_SSL = False
 
 BPL_ID_PADRAO = 3
